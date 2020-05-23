@@ -1,37 +1,32 @@
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+from dash.dependencies import Input, Output
 import plotly.graph_objs as go
 import redis
 import flask
-import time
 import os
 import json
-import dummy_data
 import pandas as pd
-import datetime as dt
-from dash.dependencies import Input, Output
 
 df_list = dict()
 
 
 def get_data(name, redis_conn):
-    keys = []
+    key_list = []
     for key in redis_conn.keys():
         if name in key:
             data = json.loads(r.get(key))
-            keys.append(key)
+            key_list.append(key)
             df = pd.DataFrame(data[key], columns=['Reading'])
-            df['Date'] = pd.date_range("00:00:00", "23:59:00", freq="15min").strftime('%H:%M:%S')
             df_list[key] = df
 
-    return keys
+    return key_list
 
 
 def create_graphs(key):
-    # Testing with dummy data
-    df = pd.DataFrame(df_list[key][1]), columns=['Reading'])
-    print(df_list[key])
+    df = pd.DataFrame(df_list[key], columns=['Reading'])
+    df['Date'] = pd.date_range("00:00:00", "23:59:00", freq="15min").strftime('%H:%M:%S')
     dummy_plot = go.Scatter(
         x=df.Date,
         y=df['Reading'],
@@ -59,12 +54,6 @@ def init_flask():
 def init_dash(server, keys):
     external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-    dropdown_options = dict()
-    ind = 0
-    for key in keys:
-        dropdown_options['result ' + str(ind)] = {'label': key, 'value': ind}
-        ind = ind + 1
-
     app = dash.Dash(__name__, external_stylesheets=external_stylesheets, server=server)
 
     app.layout = html.Div(children=[
@@ -76,7 +65,7 @@ def init_dash(server, keys):
         dcc.Dropdown(
             id='results-dropdown',
             options=[{'label': key, 'value': key} for key in keys],
-            placeholder="Select a result",
+            value=keys[0],
         ),
         html.Div([dcc.Graph(id="graph")])
     ])
@@ -85,7 +74,7 @@ def init_dash(server, keys):
                   [Input(component_id='results-dropdown', component_property='value')]
                   )
     def display_graphs(results_dropdown):
-        fig = create_graphs(key)
+        fig = create_graphs(results_dropdown)
         return fig
 
     app.run_server(debug=True)

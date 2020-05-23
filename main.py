@@ -1,30 +1,32 @@
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+from dash.dependencies import Input, Output
 import plotly.graph_objs as go
 import redis
 import flask
-import time
 import os
 import json
-import dummy_data
 import pandas as pd
-import datetime as dt
+
+df_list = dict()
 
 
-def get_data(key, redis_conn):
-    if redis_conn.exists(key):
-        data = json.loads(r.get(key))
-        return data
-    else:
-        return
+def get_data(name, redis_conn):
+    key_list = []
+    for key in redis_conn.keys():
+        if name in key:
+            data = json.loads(r.get(key))
+            key_list.append(key)
+            df = pd.DataFrame(data[key], columns=['Reading'])
+            df_list[key] = df
+
+    return key_list
 
 
-def create_graphs(data, key):
-    # Testing with dummy data
-    df = pd.DataFrame(list(data[key]), columns=['Reading'])
-    df['Date'] = pd.date_range("00:00", "23:45", freq="15min")
-
+def create_graphs(key):
+    df = pd.DataFrame(df_list[key], columns=['Reading'])
+    df['Date'] = pd.date_range("00:00:00", "23:59:00", freq="15min").strftime('%H:%M:%S')
     dummy_plot = go.Scatter(
         x=df.Date,
         y=df['Reading'],
@@ -40,7 +42,7 @@ def create_graphs(data, key):
     data = [dummy_plot]
     fig = dict(data=data, layout=layout)
 
-    return dummy_plot, fig
+    return fig
 
 
 def init_flask():
@@ -49,31 +51,39 @@ def init_flask():
     return server
 
 
-def init_dash(server, data, fig):
+def init_dash(server, keys):
     external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
     app = dash.Dash(__name__, external_stylesheets=external_stylesheets, server=server)
 
     app.layout = html.Div(children=[
-        html.H1(children='Hello Dash'),
+        html.H1(children='SEMS'),
 
         html.Div(children='''
-            Dash: A web application framework for Python.
+            SEMS UI
         '''),
-        dcc.Graph(id='my-graph', figure=fig)
+        dcc.Dropdown(
+            id='results-dropdown',
+            options=[{'label': key, 'value': key} for key in keys],
+            value=keys[0],
+        ),
+        html.Div([dcc.Graph(id="graph")])
     ])
+
+    @app.callback(Output(component_id='graph', component_property='figure'),
+                  [Input(component_id='results-dropdown', component_property='value')]
+                  )
+    def display_graphs(results_dropdown):
+        fig = create_graphs(results_dropdown)
+        return fig
 
     app.run_server(debug=True)
 
 
 if __name__ == '__main__':
     project_name = "GREENWICH"
-    ID = "20200420140133"
-    name = "dummy"
-    key = project_name + ":DATA:" + ID + ":" + name
     r = redis.Redis(host='localhost', port=6379, db=2, decode_responses=True)
-    data = get_data(key=key, redis_conn=r)
+    keys = get_data(name=project_name, redis_conn=r)
 
     server = init_flask()
-    graph, fig = create_graphs(data, key)
-    init_dash(server, data, fig)
+    init_dash(server, keys)
