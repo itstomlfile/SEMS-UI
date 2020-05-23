@@ -44,12 +44,11 @@ def create_graphs(key):
     dummy_plot = go.Scatter(
         x=df.Date,
         y=df['Reading'],
-        name="Dummy",
         line=dict(color='#17BECF'),
         opacity=0.8)
 
     layout = dict(
-        title='Dummy Data',
+        title=name_list[key],
         type='date'
     )
 
@@ -60,23 +59,19 @@ def create_graphs(key):
 
 
 def init_flask():
-    server = flask.Flask('app')
+    server = flask.Flask('SEMS-UI')
     server.secret_key = os.environ.get('secret_key', 'secret')
     return server
 
 
-def init_dash(keys):
+def init_dash(keys, name_list):
     server = init_flask()
     external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
     app = dash.Dash(__name__, external_stylesheets=external_stylesheets, server=server)
 
     app.layout = html.Div(children=[
-        html.H1(children='SEMS'),
-
-        html.Div(children='''
-            SEMS UI
-        '''),
+        html.H1(children='Siemens Energy Management System'),
         dcc.Dropdown(
             id='results-dropdown',
             options=[{'label': key, 'value': key} for key in keys],
@@ -95,6 +90,22 @@ def init_dash(keys):
     app.run_server(debug=True)
 
 
+def get_set_name(keys):
+    names = dict()
+    for key in keys:
+        char_list = []
+        name = ""
+        for char in key[::-1]:
+            if char == ':':
+                break
+            else:
+                char_list.append(char)
+            name = "".join(char_list)[::-1]
+        names[key] = name
+    return names
+
+
 if __name__ == '__main__':
     keys = get_data(name=NAME)
-    init_dash(keys)
+    name_list = get_set_name(keys)
+    init_dash(keys, name_list)

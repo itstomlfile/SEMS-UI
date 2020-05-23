@@ -22,6 +22,7 @@ def populate(key):
 if __name__ == '__main__':
     project_name = "GREENWICH"
     ID = "20200420140137"
-    name = "dummy"
-    key = project_name + ":DATA:" + ID + ":" + name
-    populate(key)
+    names = ["x", "y", "z", "a1", "a2"]
+    for name in names:
+        key = project_name + ":DATA:" + ID + ":" + name
+        populate(key)
