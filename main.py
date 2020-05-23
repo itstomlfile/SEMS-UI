@@ -12,11 +12,12 @@ import pandas as pd
 df_list = dict()
 
 
-def get_data(name, redis_conn):
+def get_data(name):
+    redis_conn = redis.Redis(host='localhost', port=6379, db=2, decode_responses=True)
     key_list = []
     for key in redis_conn.keys():
         if name in key:
-            data = json.loads(r.get(key))
+            data = json.loads(redis_conn.get(key))
             key_list.append(key)
             df = pd.DataFrame(data[key], columns=['Reading'])
             df_list[key] = df
@@ -51,7 +52,8 @@ def init_flask():
     return server
 
 
-def init_dash(server, keys):
+def init_dash(keys):
+    server = init_flask()
     external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
     app = dash.Dash(__name__, external_stylesheets=external_stylesheets, server=server)
@@ -82,8 +84,5 @@ def init_dash(server, keys):
 
 if __name__ == '__main__':
     project_name = "GREENWICH"
-    r = redis.Redis(host='localhost', port=6379, db=2, decode_responses=True)
-    keys = get_data(name=project_name, redis_conn=r)
-
-    server = init_flask()
-    init_dash(server, keys)
+    keys = get_data(name=project_name)
+    init_dash(keys)
