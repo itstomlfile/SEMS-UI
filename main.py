@@ -64,27 +64,53 @@ def init_flask():
     return server
 
 
-def init_dash(keys, name_list):
+def init_dash(keys):
     server = init_flask()
     external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
     app = dash.Dash(__name__, external_stylesheets=external_stylesheets, server=server)
 
     app.layout = html.Div(children=[
-        html.H1(children='Siemens Energy Management System'),
-        dcc.Dropdown(
-            id='results-dropdown',
-            options=[{'label': key, 'value': key} for key in keys],
-            value=keys[0],
-        ),
-        html.Div([dcc.Graph(id="graph")])
-    ])
 
-    @app.callback(Output(component_id='graph', component_property='figure'),
-                  [Input(component_id='results-dropdown', component_property='value')]
+        html.H1(children='Siemens Energy Management System'),
+
+        # Col 1
+        html.Div([
+            dcc.Dropdown(
+                id='results-dropdown-1',
+                options=[{'label': key, 'value': key} for key in keys],
+                value=keys[0],
+            ),
+
+            html.Div([dcc.Graph(id="graph-1")])
+
+        ], className="five columns"),
+
+        # Col 2
+        html.Div([
+            dcc.Dropdown(
+                id='results-dropdown-2',
+                options=[{'label': key, 'value': key} for key in keys],
+                value=keys[0],
+            ),
+
+            html.Div([dcc.Graph(id="graph-2")])
+
+        ], className="five columns")
+    ], className="row")
+
+    @app.callback(Output(component_id='graph-1', component_property='figure'),
+                  [Input(component_id='results-dropdown-1', component_property='value')]
                   )
-    def display_graphs(results_dropdown):
-        fig = create_graphs(results_dropdown)
+    def display_graph_1(results_dropdown_1):
+        fig = create_graphs(results_dropdown_1)
+        return fig
+
+    @app.callback(Output(component_id='graph-2', component_property='figure'),
+                  [Input(component_id='results-dropdown-2', component_property='value')]
+                  )
+    def display_graph_2(results_dropdown_2):
+        fig = create_graphs(results_dropdown_2)
         return fig
 
     app.run_server(debug=True)
@@ -108,4 +134,4 @@ def get_set_name(keys):
 if __name__ == '__main__':
     keys = get_data(name=NAME)
     name_list = get_set_name(keys)
-    init_dash(keys, name_list)
+    init_dash(keys)
