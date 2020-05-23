@@ -14,14 +14,13 @@ def generate_values(key):
 
 
 def populate(key):
-    r = redis.Redis(host='localhost', port=6379, db=2, decode_responses=True)
-
+    r = redis.Redis(host='localhost', port=6379, db=0)
     r.set(key, json.dumps(generate_values(key)))
 
 
 if __name__ == '__main__':
     project_name = "GREENWICH"
-    ID = "20200420140137"
+    ID = "20200420140138"
     names = ["x", "y", "z", "a1", "a2"]
     for name in names:
         key = project_name + ":DATA:" + ID + ":" + name
