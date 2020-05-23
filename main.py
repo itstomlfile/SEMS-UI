@@ -23,19 +23,22 @@ START_TIME = config['Data']['start_time']
 END_TIME = config['Data']['end_time']
 INTERVALS = config['Data']['intervals']
 MATCH = NAME + ":DATA"
-VERTICES = ["x", "y", "z"]
+VERTICES = ["x", "y", "z", "1", "2", "3"]
 
 df_list = dict()
 
 
 def create_df(data, match):
     for vertex in VERTICES:
-        data[vertex] = json.loads(data[vertex])
+        if vertex in data.keys():
+            data[vertex] = json.loads(data[vertex])
+            df = pd.DataFrame(list(data[vertex][match + vertex]), columns=['Reading'])
+            df['Date'] = pd.date_range(START_TIME, END_TIME, freq=INTERVALS).strftime('%H:%M:%S')
+            df_list[vertex] = df
 
-        df = pd.DataFrame(list(data[vertex][match + vertex]), columns=['Reading'])
-        df['Date'] = pd.date_range(START_TIME, END_TIME, freq=INTERVALS).strftime('%H:%M:%S')
+        else:
+            df_list[vertex] = 'No data for {}'.format(vertex)
 
-        df_list[vertex] = df
     return df_list
 
 
@@ -43,18 +46,21 @@ def create_graphs(df_list):
     graph_list = []
     for vertex in df_list:
         df = df_list[vertex]
-        graph_list.append(html.Div(dcc.Graph(
-            id='graph-{}'.format(vertex),
-            figure=dict(
-                data=[dict(
-                    x=df.Date,
-                    y=df.Reading,
-                )],
-                layout=dict(
-                    title=vertex,
-                    type='date',
-                )),
-        ), className="four columns"))
+        if type(df) is not str:
+            graph_list.append(html.Div(dcc.Graph(
+                id='graph-{}'.format(vertex),
+                figure=dict(
+                    data=[dict(
+                        x=df.Date,
+                        y=df.Reading,
+                    )],
+                    layout=dict(
+                        title=vertex,
+                        type='date',
+                    )),
+            ), className="four columns"))
+        else:
+            graph_list.append(html.Div([html.H3(children=df)], className="four columns"))
     return graph_list
 
 
@@ -74,7 +80,6 @@ def init_dash(ids):
 
         html.H1(children='Sustainability Energy Management System'),
 
-        # Col 1
         html.Div([
             dcc.Dropdown(
                 id='results-dropdown',
@@ -90,7 +95,7 @@ def init_dash(ids):
     @app.callback(Output(component_id='graphs', component_property='children'),
                   [Input(component_id='results-dropdown', component_property='value')]
                   )
-    def display_graph_1(results_dropdown):
+    def display_graph(results_dropdown):
         match = NAME + ":DATA:" + results_dropdown + ":"
         data = util.get_data(match=match, vertex_list=VERTICES)
         df_list = create_df(dict(data), match)
@@ -101,7 +106,5 @@ def init_dash(ids):
 
 
 if __name__ == '__main__':
-
     ids = util.get_ids(match=MATCH)
-
     init_dash(ids)
