@@ -1,0 +1,10 @@
+Redis:
+  hostname : "localhost"
+  port : 6379
+  db : 2
+
+Data:
+  name: "GREENWICH"
+  start_time: "00:00:00"
+  end_time: "23:45:00"
+  intervals: "15min"
