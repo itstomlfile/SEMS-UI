@@ -13,7 +13,7 @@ def generate_values(key):
     return {key: values}
 
 
-def populate(key):
+def populate_data(key):
     r = redis.Redis(host='localhost', port=6379, db=0)
     r.set(key, json.dumps(generate_values(key)))
 

@@ -3,7 +3,6 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
 import plotly.graph_objs as go
-import redis
 import flask
 import os
 import json
@@ -11,19 +10,17 @@ import pandas as pd
 import yaml
 from lib import sems_utils as util
 
-config_file = open("config.yaml")
+config_file = open("sems-frontend.yaml")
 config = yaml.load(config_file, Loader=yaml.FullLoader)
 
 # YAML CONFIG VARIABLES
 NAME = config['Data']['name']
-HOST_NAME = config['Redis']['hostname']
-PORT = config['Redis']['port']
-DB = config['Redis']['db']
 START_TIME = config['Data']['start_time']
 END_TIME = config['Data']['end_time']
 INTERVALS = config['Data']['intervals']
 MATCH = NAME + ":DATA"
 VERTICES = ["x", "y", "z", "1", "2", "3"]
+GRAPHS = config[NAME]
 
 df_list = dict()
 
@@ -43,24 +40,29 @@ def create_df(data, match):
 
 
 def create_graphs(df_list):
+    param_list = dict()
     graph_list = []
-    for vertex in df_list:
-        df = df_list[vertex]
-        if type(df) is not str:
-            graph_list.append(html.Div(dcc.Graph(
-                id='graph-{}'.format(vertex),
-                figure=dict(
-                    data=[dict(
-                        x=df.Date,
-                        y=df.Reading,
-                    )],
-                    layout=dict(
-                        title=vertex,
-                        type='date',
-                    )),
-            ), className="four columns"))
-        else:
-            graph_list.append(html.Div([html.H3(children=df)], className="four columns"))
+
+    for graph in GRAPHS:
+        param_list[graph] = GRAPHS[graph]['params']
+        data = []
+        for vertex in param_list[graph]:
+            df = df_list[vertex]
+            if type(df) is not str:
+                data.append(go.Scatter(
+                    x=df.Date,
+                    y=df.Reading,
+                    mode='lines',
+                    name=vertex)
+                )
+            else:
+                print('not found')
+                # graph_list.append(html.Div([html.H3(children=df)], className="four columns"))
+        graph_list.append(html.Div(dcc.Graph(
+            id='graph-{}'.format(graph),
+            figure=go.Figure(data=data),
+        )
+        ))
     return graph_list
 
 
