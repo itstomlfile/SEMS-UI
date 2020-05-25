@@ -18,7 +18,13 @@ def create_df(data, match, vertices, common):
     for vertex in vertices:
         if vertex in data.keys():
             data[vertex] = json.loads(data[vertex])
-            df = pd.DataFrame(list(data[vertex][match + vertex]), columns=['Reading'])
+            data_list = data[vertex][match + vertex][:common.timesteps]
+
+            if len(data_list) is not common.timesteps:
+                for x in range(len(data_list), common.timesteps):
+                    data_list.append('')
+
+            df = pd.DataFrame(data_list, columns=['Reading'])
             df['Date'] = pd.date_range(common.start_time, end_time, freq=common.intervals).strftime('%H:%M:%S')
             df_list[vertex] = df
 
@@ -47,12 +53,14 @@ def multi_value_graph(graph_name, id, params, graphs, common):
         else:
             div_list.append(html.Div([html.H3(children=df)]))
     div_list.append(html.Div(dcc.Graph(
-    id='graph-{}'.format(graph_name),
-    figure=go.Figure(data=graph_data,
-                     layout=dict(
-                         title_text= graphs[graph_name]['title'],
-                     ))
+        id='graph-{}'.format(graph_name),
+        figure=go.Figure(data=graph_data,
+                         layout=dict(
+                             title_text=graphs[graph_name]['title']
+                         )
+                         )
     )))
+
     return div_list
 
 

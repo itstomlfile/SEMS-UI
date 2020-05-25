@@ -20,7 +20,7 @@ def populate_data(key):
 
 if __name__ == '__main__':
     project_name = "GREENWICH"
-    ID = "20200420140138"
+    ID = "20200420140140"
     names = ["x", "y", "z", "a1", "a2"]
     for name in names:
         key = project_name + ":DATA:" + ID + ":" + name
