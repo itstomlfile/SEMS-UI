@@ -11,21 +11,20 @@ import yaml
 from lib import sems_utils as util
 
 
-def create_df(data, match, vertices, common):
-    end_time = pd.to_datetime(common.start_time) + (pd.to_timedelta(common.intervals) * (common.timesteps - 1))
+def create_df(data, match, vertices, timesteps, end_time):
+
     df_list = {}
 
     for vertex in vertices:
         if vertex in data.keys():
             data[vertex] = json.loads(data[vertex])
-            data_list = data[vertex][match + vertex][:common.timesteps]
+            data_list = data[vertex][match + vertex][:timesteps]
 
-            if len(data_list) is not common.timesteps:
-                for x in range(len(data_list), common.timesteps):
+            if len(data_list) is not timesteps:
+                for x in range(len(data_list), timesteps):
                     data_list.append('')
 
             df = pd.DataFrame(data_list, columns=['Reading'])
-            df['Date'] = pd.date_range(common.start_time, end_time, freq=common.intervals).strftime('%H:%M:%S')
             df_list[vertex] = df
 
         else:
@@ -34,42 +33,53 @@ def create_df(data, match, vertices, common):
     return df_list
 
 
-def multi_bar_graph(graph_name, id, params, graphs, common):
-    #TODO: Group bar charts
+def forecast_graph(graph_name, id, params, graphs, common):
+    # TODO: Fix time indexing
     match = common.name + ":DATA:" + id + ":"
     data = util.get_data(match=match, vertex_list=params)
-    df_list = create_df(dict(data), match, params, common)
-
+    div_list = []
     graph_data = []
-    vertex = params[0]
-    df = df_list[vertex]
+    end_time = pd.to_datetime(common.start_time)
+    ind = 0
+    for vertex in params:
 
-    if type(df) is not str:
-        graph_data.append(go.Bar(
-            x=df.Date,
-            y=df.Reading,
-            name=vertex)
-        )
-    else:
-        return html.Div([html.H3(children=df)], className="four columns")
-
-    return html.Div(dcc.Graph(
+        end_time = end_time + (pd.to_timedelta(common.intervals) * (common.timesteps))
+        print(type(params))
+        df_list = (create_df(dict(data), match, vertex, (common.timesteps * len(params)), end_time))
+        df = df_list[vertex]
+        # df['Date'] = pd.date_range(common.start_time, end_time, freq=common.intervals)
+        if type(df) is not str:
+            graph_data.append(go.Scatter(
+                # x=df.Date,
+                y=df.Reading,
+                mode='lines',
+                name=vertex)
+            )
+        else:
+            div_list.append(html.Div([html.H3(children=df)]))
+        ind = ind + 1
+    div_list.append(html.Div(dcc.Graph(
+        id='graph-{}'.format(graph_name),
         figure=go.Figure(data=graph_data,
                          layout=dict(
                              title_text=graphs[graph_name]['title']
                          )
                          )
-    ))
+    )))
+
+    return div_list
 
 
 def single_bar_graph(graph_name, id, params, graphs, common):
     match = common.name + ":DATA:" + id + ":"
     data = util.get_data(match=match, vertex_list=params)
-    df_list = create_df(dict(data), match, params, common)
+    end_time = pd.to_datetime(common.start_time) + (pd.to_timedelta(common.intervals) * (common.timesteps - 1))
+    df_list = create_df(dict(data), match, params, common.timesteps, end_time)
 
     graph_data = []
     vertex = params[0]
     df = df_list[vertex]
+    df['Date'] = pd.date_range(common.start_time, end_time, freq=common.intervals)
 
     if type(df) is not str:
         graph_data.append(go.Bar(
@@ -92,12 +102,14 @@ def single_bar_graph(graph_name, id, params, graphs, common):
 def multi_value_graph(graph_name, id, params, graphs, common):
     match = common.name + ":DATA:" + id + ":"
     data = util.get_data(match=match, vertex_list=params)
-    df_list = create_df(dict(data), match, params, common)
+    end_time = pd.to_datetime(common.start_time) + (pd.to_timedelta(common.intervals) * (common.timesteps - 1))
+    df_list = create_df(dict(data), match, params, common.timesteps, end_time)
     div_list = []
     graph_data = []
 
     for vertex in params:
         df = df_list[vertex]
+        df['Date'] = pd.date_range(common.start_time, end_time, freq=common.intervals)
         if type(df) is not str:
             graph_data.append(go.Scatter(
                 x=df.Date,
@@ -121,12 +133,15 @@ def multi_value_graph(graph_name, id, params, graphs, common):
 
 def single_value_graph(graph_name, id, params, graphs, common):
     match = common.name + ":DATA:" + id + ":"
+
     data = util.get_data(match=match, vertex_list=params)
-    df_list = create_df(dict(data), match, params, common)
+    end_time = pd.to_datetime(common.start_time) + (pd.to_timedelta(common.intervals) * (common.timesteps - 1))
+    df_list = create_df(dict(data), match, params, common.timesteps, end_time)
 
     graph_data = []
     vertex = params[0]
     df = df_list[vertex]
+    df['Date'] = pd.date_range(common.start_time, end_time, freq=common.intervals)
 
     if type(df) is not str:
         graph_data.append(go.Scatter(
@@ -206,7 +221,7 @@ if __name__ == '__main__':
 
     common = Common()
     common.name = "GREENWICH"
-    common.start_time = "00:00:00"
+    common.start_time = "2020-01-01 00:00:00"
     common.intervals = "15min"
     common.timesteps = 96
 

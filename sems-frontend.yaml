@@ -24,3 +24,11 @@ GREENWICH:
     description: A third test graph
     params:
       - x
+
+#  graph-4:
+#    graph-function: forecast_graph
+#    title: Graph Four
+#    description: A fourth test graph
+#    params:
+#      - x
+#      - y
