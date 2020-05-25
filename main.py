@@ -34,6 +34,61 @@ def create_df(data, match, vertices, common):
     return df_list
 
 
+def multi_bar_graph(graph_name, id, params, graphs, common):
+    #TODO: Group bar charts
+    match = common.name + ":DATA:" + id + ":"
+    data = util.get_data(match=match, vertex_list=params)
+    df_list = create_df(dict(data), match, params, common)
+
+    graph_data = []
+    vertex = params[0]
+    df = df_list[vertex]
+
+    if type(df) is not str:
+        graph_data.append(go.Bar(
+            x=df.Date,
+            y=df.Reading,
+            name=vertex)
+        )
+    else:
+        return html.Div([html.H3(children=df)], className="four columns")
+
+    return html.Div(dcc.Graph(
+        figure=go.Figure(data=graph_data,
+                         layout=dict(
+                             title_text=graphs[graph_name]['title']
+                         )
+                         )
+    ))
+
+
+def single_bar_graph(graph_name, id, params, graphs, common):
+    match = common.name + ":DATA:" + id + ":"
+    data = util.get_data(match=match, vertex_list=params)
+    df_list = create_df(dict(data), match, params, common)
+
+    graph_data = []
+    vertex = params[0]
+    df = df_list[vertex]
+
+    if type(df) is not str:
+        graph_data.append(go.Bar(
+            x=df.Date,
+            y=df.Reading,
+            name=vertex)
+        )
+    else:
+        return html.Div([html.H3(children=df)], className="four columns")
+
+    return html.Div(dcc.Graph(
+        figure=go.Figure(data=graph_data,
+                         layout=dict(
+                             title_text=graphs[graph_name]['title']
+                         )
+                         )
+    ))
+
+
 def multi_value_graph(graph_name, id, params, graphs, common):
     match = common.name + ":DATA:" + id + ":"
     data = util.get_data(match=match, vertex_list=params)

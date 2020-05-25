@@ -19,8 +19,8 @@ GREENWICH:
       - x
 
   graph-3:
-    graph-function: single_value_graph
+    graph-function: single_bar_graph
     title: Graph Three
-    description: A second test graph
+    description: A third test graph
     params:
       - x
