@@ -24,4 +24,4 @@ if __name__ == '__main__':
     names = ["x", "y", "z", "a1", "a2"]
     for name in names:
         key = project_name + ":DATA:" + ID + ":" + name
-        populate(key)
+        populate_data(key)

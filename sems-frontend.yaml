@@ -1,19 +1,26 @@
-Data:
-  name: "GREENWICH"
-  start_time: "00:00:00"
-  end_time: "23:45:00"
-  intervals: "15min"
+data:
+  name: GREENWICH
 
 GREENWICH:
-  Graph-1:
-    graph-function: "multi-val"
-    title: "Multi-val graph"
-    description: "A test graph"
-    params: [x, y, z]
+  graph-1:
+    graph-function: multi_value_graph
+    title: Graph One
+    description: A first test graph
+    params:
+      - x
+      - y
+      - z
 
-  Graph-2:
-    graph-function: "single-val"
-    title: "Single-val graph"
-    description: "A test graph"
-    params: [x,z]
+  graph-2:
+    graph-function: single_value_graph
+    title: Graph Two
+    description: A second test graph
+    params:
+      - x
 
+  graph-3:
+    graph-function: single_value_graph
+    title: Graph Three
+    description: A second test graph
+    params:
+      - x

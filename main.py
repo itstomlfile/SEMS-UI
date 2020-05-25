@@ -10,27 +10,16 @@ import pandas as pd
 import yaml
 from lib import sems_utils as util
 
-config_file = open("sems-frontend.yaml")
-config = yaml.load(config_file, Loader=yaml.FullLoader)
 
-# YAML CONFIG VARIABLES
-NAME = config['Data']['name']
-START_TIME = config['Data']['start_time']
-END_TIME = config['Data']['end_time']
-INTERVALS = config['Data']['intervals']
-MATCH = NAME + ":DATA"
-VERTICES = ["x", "y", "z", "1", "2", "3"]
-GRAPHS = config[NAME]
+def create_df(data, match, vertices, common):
+    end_time = pd.to_datetime(common.start_time) + (pd.to_timedelta(common.intervals) * (common.timesteps - 1))
+    df_list = {}
 
-df_list = dict()
-
-
-def create_df(data, match):
-    for vertex in VERTICES:
+    for vertex in vertices:
         if vertex in data.keys():
             data[vertex] = json.loads(data[vertex])
             df = pd.DataFrame(list(data[vertex][match + vertex]), columns=['Reading'])
-            df['Date'] = pd.date_range(START_TIME, END_TIME, freq=INTERVALS).strftime('%H:%M:%S')
+            df['Date'] = pd.date_range(common.start_time, end_time, freq=common.intervals).strftime('%H:%M:%S')
             df_list[vertex] = df
 
         else:
@@ -39,31 +28,75 @@ def create_df(data, match):
     return df_list
 
 
-def create_graphs(df_list):
-    param_list = dict()
-    graph_list = []
+def multi_value_graph(graph_name, id, params, graphs, common):
+    match = common.name + ":DATA:" + id + ":"
+    data = util.get_data(match=match, vertex_list=params)
+    df_list = create_df(dict(data), match, params, common)
+    div_list = []
+    graph_data = []
 
-    for graph in GRAPHS:
-        param_list[graph] = GRAPHS[graph]['params']
-        data = []
-        for vertex in param_list[graph]:
-            df = df_list[vertex]
-            if type(df) is not str:
-                data.append(go.Scatter(
-                    x=df.Date,
-                    y=df.Reading,
-                    mode='lines',
-                    name=vertex)
-                )
-            else:
-                print('not found')
-                # graph_list.append(html.Div([html.H3(children=df)], className="four columns"))
-        graph_list.append(html.Div(dcc.Graph(
-            id='graph-{}'.format(graph),
-            figure=go.Figure(data=data),
+    for vertex in params:
+        df = df_list[vertex]
+        if type(df) is not str:
+            graph_data.append(go.Scatter(
+                x=df.Date,
+                y=df.Reading,
+                mode='lines',
+                name=vertex)
+            )
+        else:
+            div_list.append(html.Div([html.H3(children=df)]))
+    div_list.append(html.Div(dcc.Graph(
+    id='graph-{}'.format(graph_name),
+    figure=go.Figure(data=graph_data,
+                     layout=dict(
+                         title_text= graphs[graph_name]['title'],
+                     ))
+    )))
+    return div_list
+
+
+def single_value_graph(graph_name, id, params, graphs, common):
+    match = common.name + ":DATA:" + id + ":"
+    data = util.get_data(match=match, vertex_list=params)
+    df_list = create_df(dict(data), match, params, common)
+
+    graph_data = []
+    vertex = params[0]
+    df = df_list[vertex]
+
+    if type(df) is not str:
+        graph_data.append(go.Scatter(
+            x=df.Date,
+            y=df.Reading,
+            mode='lines',
+            name=vertex)
         )
-        ))
-    return graph_list
+    else:
+        return html.Div([html.H3(children=df)], className="four columns")
+
+    return html.Div(dcc.Graph(
+        figure=go.Figure(data=graph_data,
+                         layout=dict(
+                             title_text=graphs[graph_name]['title']
+                         )
+                         )
+    ))
+
+
+def create_graphs(id, graphs, common):
+    div_list = []
+    for graph in graphs:
+        params = graphs[graph]['params']
+        func = graphs[graph]['graph-function']
+
+        result = globals()[func](graph, id, params, graphs, common)
+        if type(result) is list:
+            for div in result:
+                div_list.append(div)
+        else:
+            div_list.append(result)
+    return div_list
 
 
 def init_flask():
@@ -72,25 +105,22 @@ def init_flask():
     return server
 
 
-def init_dash(ids):
+def init_dash(ids, common, graphs):
     server = init_flask()
     external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
     app = dash.Dash(__name__, external_stylesheets=external_stylesheets, server=server)
 
     app.layout = html.Div(children=[
-
         html.H1(children='Sustainability Energy Management System'),
-
         html.Div([
             dcc.Dropdown(
                 id='results-dropdown',
-                options=[{'label': id, 'value': id} for id in ids],
+                options=[{'label': _id, 'value': _id} for _id in ids],
                 value=ids[0],
             ),
 
             html.Div(id='graphs')
-
         ]),
     ], className="row")
 
@@ -98,15 +128,24 @@ def init_dash(ids):
                   [Input(component_id='results-dropdown', component_property='value')]
                   )
     def display_graph(results_dropdown):
-        match = NAME + ":DATA:" + results_dropdown + ":"
-        data = util.get_data(match=match, vertex_list=VERTICES)
-        df_list = create_df(dict(data), match)
-        fig = create_graphs(df_list)
-        return fig
+        return create_graphs(results_dropdown, graphs, common)
 
     app.run_server(debug=True)
 
 
+class Common:
+    pass
+
+
 if __name__ == '__main__':
-    ids = util.get_ids(match=MATCH)
-    init_dash(ids)
+    config_file = open("sems-frontend.yaml")
+    config = yaml.load(config_file, Loader=yaml.FullLoader)
+
+    common = Common()
+    common.name = "GREENWICH"
+    common.start_time = "00:00:00"
+    common.intervals = "15min"
+    common.timesteps = 96
+
+    ids = util.get_ids(match=common.name + ":DATA")
+    init_dash(ids, common, config[common.name])
